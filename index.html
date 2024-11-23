@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Headphones</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+    // Scene, Camera, Renderer
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0xf8f8f8); // Off-white background
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // Tone mapping for realistic lighting
+renderer.toneMappingExposure = 1.5; // Adjust brightness
+document.body.appendChild(renderer.domElement);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); // Add soft white light
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Stronger directional light
+directionalLight.position.set(1, 2, 3).normalize();
+scene.add(directionalLight);
+
+const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); // Add additional ambient lighting
+scene.add(hemisphereLight);
+
+// Environment Map (optional)
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+new THREE.TextureLoader().load(
+    'https://threejs.org/examples/textures/equirectangular/royal_esplanade_1k.hdr', // Replace with your preferred HDR texture
+    (texture) => {
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+        scene.environment = envMap;
+        scene.background = envMap; // Optional background
+        texture.dispose();
+        pmremGenerator.dispose();
+    }
+);
+
+// OrbitControls
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; // Smooth controls
+controls.dampingFactor = 0.1;
+controls.screenSpacePanning = false;
+controls.minDistance = 2;
+controls.maxDistance = 10;
+
+// Load 3D Model
+const loader = new THREE.GLTFLoader();
+loader.load(
+    'scene.gltf', // Your 3D model path
+    function (gltf) {
+        const model = gltf.scene;
+        scene.add(model);
+
+        // Adjust material properties for palette black
+        model.traverse((child) => {
+            if (child.isMesh && child.material) {
+                child.material.roughness = 0.2; // Slightly glossy surface
+                child.material.metalness = 0.3; // Subtle metallic sheen
+                child.material.color.set(0x101010); // Deep black color
+            }
+        });
+
+        // Position and scale (adjust as needed)
+        model.position.set(0, 0, 0);
+        model.scale.set(1, 1, 1);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    },
+    undefined,
+    function (error) {
+        console.error('Error loading the model:', error);
+    }
+);
+
+
+// Camera position
+camera.position.set(0, 2, 5);
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+</script>
+</body>
+</html>
